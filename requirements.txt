@@ -1,0 +1,18 @@
+# Night Guidance System — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# ── Deep Learning ─────────────────────────────
+torch>=2.0.0
+torchvision>=0.15.0
+
+# ── Computer Vision ───────────────────────────
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=9.5.0
+
+# ── Web Backend ───────────────────────────────
+flask>=3.0.0
+werkzeug>=3.0.0
+
+# ── Utilities ─────────────────────────────────
+tqdm>=4.65.0

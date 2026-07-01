@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Driving Guidance System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inconsolata:wght@300;400;500&family=Instrument+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f4f3f0; --bg2:#eceae5; --bg3:#e4e1da; --surface:#faf9f7;
+  --border:rgba(80,80,100,0.10); --border-md:rgba(80,80,100,0.18); --border-dark:rgba(80,80,100,0.28);
+  --accent:#3a5a8c; --accent-light:#e8eef6; --accent-mid:#6d8fb5;
+  --green:#2e7d4f; --green-light:#e6f4ec; --amber:#9a6200; --amber-light:#fef3dc;
+  --red:#c0392b; --red-light:#fdecea;
+  --text:#1c1c28; --text-2:#5a5a72; --text-3:#9090aa;
+  --font-display:'Syne',sans-serif; --font-body:'Instrument Sans',sans-serif; --font-mono:'Inconsolata',monospace;
+  --radius:10px; --radius-sm:6px;
+  --shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
+  --shadow-md:0 2px 8px rgba(0,0,0,0.08),0 8px 28px rgba(0,0,0,0.06);
+}
+html,body { height:100%; background:var(--bg); color:var(--text); font-family:var(--font-body); font-size:14px; line-height:1.6; }
+body { background-image:radial-gradient(circle,rgba(80,80,120,0.07) 1px,transparent 1px); background-size:24px 24px; }
+
+/* HEADER */
+header { height:58px; background:var(--surface); border-bottom:1px solid var(--border-md); display:flex; align-items:center; justify-content:space-between; padding:0 28px; box-shadow:var(--shadow); position:relative; z-index:100; }
+.logo { display:flex; align-items:center; gap:12px;  margin-left: 600px;}
+.logo-mark { width:32px; height:32px; background:var(--accent); border-radius:8px; display:flex; align-items:center; justify-content:center; }
+.logo-mark svg { width:18px; height:18px; }
+.logo-name { font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--text); letter-spacing:0.02em; }
+.logo-name span { color:var(--accent); }
+.header-right { display:flex; align-items:center; gap:20px; }
+.model-badge { display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px; color:var(--text-3); background:var(--bg2); border:1px solid var(--border); border-radius:20px; padding:4px 12px; }
+.model-badge .dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:blink 2.5s ease-in-out infinite; }
+.model-badge .dot.offline { background:var(--text-3); animation:none; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.clock { font-family:var(--font-mono); font-size:12px; color:var(--text-2); letter-spacing:0.05em; }
+
+/* LAYOUT */
+.app-body { display:grid; grid-template-columns:280px 1fr 256px; height:calc(100vh - 58px); overflow:hidden; }
+
+/* SIDEBARS */
+.sidebar { background:var(--surface); border-right:1px solid var(--border-md); display:flex; flex-direction:column; overflow-y:auto; overflow-x:hidden; }
+.sidebar-right { border-right:none; border-left:1px solid var(--border-md); }
+.sidebar-section { padding:18px 20px; border-bottom:1px solid var(--border); }
+.section-title { font-family:var(--font-display); font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-3); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+.section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* CONTROLS */
+.field { margin-bottom:14px; }
+.field:last-child { margin-bottom:0; }
+.field-label { font-size:11px; color:var(--text-2); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+.field-label .val { font-family:var(--font-mono); color:var(--accent); font-size:11px; }
+input[type=range] { width:100%; -webkit-appearance:none; height:3px; background:linear-gradient(to right,var(--accent) var(--pct,50%),var(--bg3) var(--pct,50%)); border-radius:2px; outline:none; cursor:pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--surface); border:2px solid var(--accent); box-shadow:0 1px 4px rgba(58,90,140,0.25); cursor:pointer; transition:transform 0.15s; }
+input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.2); }
+.toggle-row { display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border); }
+.toggle-row:last-child { border-bottom:none; }
+.toggle-info { display:flex; align-items:center; gap:8px; }
+.toggle-swatch { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.toggle-label { font-size:12px; color:var(--text); }
+.toggle-sub { font-size:10px; color:var(--text-3); }
+.switch { position:relative; width:34px; height:19px; }
+.switch input { opacity:0; width:0; height:0; }
+.switch-track { position:absolute; inset:0; background:var(--bg3); border:1px solid var(--border-md); border-radius:10px; cursor:pointer; transition:background 0.2s; }
+.switch input:checked + .switch-track { background:var(--accent); border-color:var(--accent); }
+.switch-track::after { content:''; position:absolute; top:2px; left:2px; width:13px; height:13px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.15); transition:transform 0.2s; }
+.switch input:checked + .switch-track::after { transform:translateX(15px); }
+
+/* VIEWPORT */
+.viewport { display:flex; flex-direction:column; background:var(--bg); overflow:hidden; position:relative; }
+
+/* UPLOAD ZONE */
+#upload-zone { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; cursor:pointer; position:relative; transition:background 0.25s; padding:40px; }
+#upload-zone:hover { background:var(--accent-light); }
+#upload-zone.drag-over { background:var(--accent-light); outline:2px dashed var(--accent-mid); outline-offset:-12px; }
+.upload-illustration { position:relative; width:100px; height:100px; }
+.upload-ring-outer,.upload-ring-inner { position:absolute; border-radius:50%; border:1px solid var(--border-dark); top:50%; left:50%; transform:translate(-50%,-50%); }
+.upload-ring-outer { width:100px; height:100px; border-style:dashed; animation:rot-slow 20s linear infinite; }
+.upload-ring-inner { width:68px; height:68px; background:var(--surface); box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center; font-size:26px; }
+@keyframes rot-slow { to { transform:translate(-50%,-50%) rotate(360deg); } }
+.upload-copy { text-align:center; }
+.upload-copy h2 { font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--text); margin-bottom:8px; }
+.upload-copy p { font-size:13px; color:var(--text-2); line-height:1.7; }
+.upload-cta { display:flex; gap:10px; align-items:center; }
+.btn-primary { font-family:var(--font-display); font-size:12px; font-weight:600; letter-spacing:0.06em; color:#fff; background:var(--accent); border:none; cursor:pointer; padding:10px 24px; border-radius:var(--radius-sm); box-shadow:0 2px 8px rgba(58,90,140,0.25); transition:all 0.2s; }
+.btn-primary:hover { background:#2d4a78; box-shadow:0 4px 14px rgba(58,90,140,0.35); transform:translateY(-1px); }
+.btn-ghost { font-family:var(--font-display); font-size:12px; font-weight:600; letter-spacing:0.06em; color:var(--accent); background:none; border:1.5px solid var(--border-dark); cursor:pointer; padding:9px 20px; border-radius:var(--radius-sm); transition:all 0.2s; }
+.btn-ghost:hover { background:var(--accent-light); border-color:var(--accent-mid); }
+#file-input { display:none; }
+
+/* PLAYER */
+#player-area { flex:1; display:none; flex-direction:column; }
+.video-wrapper { flex:1; position:relative; background:#000; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+
+/* KEY FIX: two modes for the video wrapper */
+/* preview-mode: canvas visible, video element hidden */
+/* result-mode:  video element visible, canvas hidden  */
+#source-video { max-width:100%; max-height:100%; object-fit:contain; display:none; }
+#output-canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; display:block; }
+.video-wrapper.result-mode #source-video  { display:block; }
+.video-wrapper.result-mode #output-canvas { display:none; }
+
+/* HUD */
+.hud-chips { position:absolute; top:12px; left:12px; display:flex; flex-direction:column; gap:5px; pointer-events:none; }
+.hud-chip { background:rgba(250,249,247,0.88); border:1px solid rgba(80,80,100,0.15); border-radius:4px; font-family:var(--font-mono); font-size:10px; color:var(--text-2); padding:3px 9px; display:flex; gap:6px; align-items:center; backdrop-filter:blur(4px); }
+.hud-chip .chip-val { color:var(--accent); font-weight:500; }
+.hud-file { position:absolute; bottom:70px; right:12px; font-family:var(--font-mono); font-size:10px; color:rgba(250,249,247,0.7); text-align:right; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,0.5); }
+#danger-banner { position:absolute; top:0; left:0; right:0; background:rgba(192,57,43,0.9); color:#fff; text-align:center; font-family:var(--font-display); font-size:14px; font-weight:700; letter-spacing:0.08em; padding:10px; display:none; animation:flash-bg 0.5s ease-in-out infinite alternate; }
+@keyframes flash-bg { from{background:rgba(192,57,43,0.9)} to{background:rgba(192,57,43,0.75)} }
+
+/* PROCESSING OVERLAY */
+#processing-overlay { display:none; position:absolute; inset:0; background:rgba(244,243,240,0.88); backdrop-filter:blur(6px); z-index:50; flex-direction:column; align-items:center; justify-content:center; gap:20px; }
+.progress-ring-wrap { position:relative; width:72px; height:72px; }
+.progress-ring { width:72px; height:72px; transform:rotate(-90deg); }
+.progress-ring-bg { fill:none; stroke:var(--bg3); stroke-width:4; }
+.progress-ring-fill { fill:none; stroke:var(--accent); stroke-width:4; stroke-linecap:round; stroke-dasharray:201; stroke-dashoffset:201; transition:stroke-dashoffset 0.4s ease; }
+.progress-pct { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:13px; font-weight:500; color:var(--accent); }
+.processing-label { font-family:var(--font-display); font-size:13px; font-weight:600; color:var(--text-2); letter-spacing:0.05em; }
+.processing-sub { font-size:11px; color:var(--text-3); }
+
+/* VIDEO CONTROLS */
+.video-controls { background:var(--surface); border-top:1px solid var(--border-md); padding:10px 16px; display:flex; flex-direction:column; gap:8px; }
+.progress-track { width:100%; height:4px; background:var(--bg3); border-radius:2px; cursor:pointer; position:relative; }
+.progress-fill { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-mid)); border-radius:2px; transition:width 0.1s linear; }
+.controls-row { display:flex; align-items:center; gap:8px; }
+.ctrl { background:none; border:1px solid var(--border-md); color:var(--text-2); cursor:pointer; width:30px; height:30px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:13px; transition:all 0.15s; }
+.ctrl:hover { background:var(--accent-light); color:var(--accent); border-color:var(--accent-mid); }
+.ctrl.primary { width:36px; height:36px; font-size:15px; background:var(--accent); color:#fff; border-color:var(--accent); }
+.ctrl.primary:hover { background:#2d4a78; border-color:#2d4a78; }
+.time-label { font-family:var(--font-mono); font-size:11px; color:var(--text-3); min-width:88px; }
+.spacer { flex:1; }
+.mode-group { display:flex; gap:2px; background:var(--bg2); border:1px solid var(--border-md); border-radius:var(--radius-sm); padding:2px; }
+.mode-pill { font-family:var(--font-mono); font-size:10px; padding:4px 10px; border:none; cursor:pointer; background:none; color:var(--text-3); border-radius:4px; transition:all 0.15s; }
+.mode-pill.active { background:var(--accent); color:#fff; box-shadow:0 1px 4px rgba(58,90,140,0.3); }
+.speed-sel { font-family:var(--font-mono); font-size:11px; background:var(--bg2); border:1px solid var(--border-md); color:var(--text-2); padding:4px 8px; border-radius:var(--radius-sm); cursor:pointer; }
+
+/* STATS */
+.stat-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:10px; }
+.stat-card:last-child { margin-bottom:0; }
+.stat-label { font-size:10px; color:var(--text-3); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px; font-family:var(--font-mono); }
+.stat-value { font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--accent); line-height:1; }
+.stat-value.green { color:var(--green); } .stat-value.amber { color:var(--amber); } .stat-value.red { color:var(--red); }
+.stat-unit { font-family:var(--font-mono); font-size:11px; color:var(--text-3); margin-left:3px; }
+.sparkline { display:flex; align-items:flex-end; gap:2px; height:28px; margin-top:8px; }
+.spark-bar { flex:1; border-radius:2px 2px 0 0; background:var(--accent-light); border-bottom:2px solid var(--accent-mid); min-height:3px; transition:height 0.3s ease; }
+.alert-log { display:flex; flex-direction:column; gap:5px; max-height:180px; overflow-y:auto; }
+.alert-entry { background:var(--red-light); border:1px solid rgba(192,57,43,0.15); border-left:3px solid var(--red); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:6px 10px; font-family:var(--font-mono); font-size:10px; display:flex; justify-content:space-between; animation:slide-in 0.25s ease; }
+@keyframes slide-in { from{opacity:0;transform:translateX(6px)} to{opacity:1;transform:translateX(0)} }
+.alert-type { color:var(--red); } .alert-time { color:var(--text-3); }
+.no-alerts { font-size:11px; color:var(--text-3); text-align:center; padding:16px 0; font-family:var(--font-mono); }
+.legend-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); }
+.legend-row:last-child { border-bottom:none; }
+.legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.legend-name { font-size:12px; color:var(--text); } .legend-class { font-family:var(--font-mono); font-size:10px; color:var(--text-3); }
+.sidebar-footer { padding:14px 20px; margin-top:auto; border-top:1px solid var(--border); }
+#result-card { display:none; background:var(--green-light); border:1px solid rgba(46,125,79,0.2); border-radius:var(--radius); padding:14px 16px; margin:16px 20px; }
+.result-title { font-family:var(--font-display); font-size:12px; font-weight:700; color:var(--green); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.08em; }
+.result-stats { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+.result-stat { font-family:var(--font-mono); font-size:10px; color:var(--text-2); }
+.result-stat strong { color:var(--text); }
+::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--border-dark); border-radius:2px; }
+#toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--text); color:var(--surface); font-family:var(--font-body); font-size:13px; padding:10px 20px; border-radius:var(--radius-sm); box-shadow:var(--shadow-md); opacity:0; pointer-events:none; transition:opacity 0.3s; z-index:999; white-space:nowrap; }
+#toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 18 18" fill="none">
+        <path d="M4 13 Q9 5 14 13" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="9" cy="9" r="2" fill="#fff"/>
+        <circle cx="9" cy="9" r="5.5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="logo-name">Driving <span>Guidance</span> System</div>
+  </div>
+  <div class="header-right">
+    <div class="model-badge"><span class="dot" id="model-dot"></span><span id="model-status-text">Checking model…</span></div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <!-- LEFT -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-title">Detection</div>
+      <div class="field">
+        <div class="field-label">Confidence threshold <span class="val" id="conf-label">0.50</span></div>
+        <input type="range" id="conf-slider" min="1" max="99" value="85"
+          oninput="syncSlider(this,'conf-label',v=>(v/100).toFixed(2));updateSetting('threshold',this.value/100)"/>
+      </div>
+      <div class="field">
+        <div class="field-label">CLAHE clip limit <span class="val" id="clahe-label">2.0</span></div>
+        <input type="range" id="clahe-slider" min="10" max="80" value="20"
+          oninput="syncSlider(this,'clahe-label',v=>(v/10).toFixed(1));updateSetting('clahe_clip',this.value/10)"/>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">Overlays</div>
+      <div class="toggle-row">
+        <div class="toggle-info"><div class="toggle-swatch" style="background:#2e7d4f"></div><div><div class="toggle-label">Road region</div><div class="toggle-sub">Class ID 0</div></div></div>
+        <label class="switch"><input type="checkbox" id="tog-road" checked onchange="state.showRoad=this.checked"/><span class="switch-track"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><div class="toggle-swatch" style="background:#3a5a8c"></div><div><div class="toggle-label">Vehicles</div><div class="toggle-sub">Class ID 2</div></div></div>
+        <label class="switch"><input type="checkbox" id="tog-car" checked onchange="state.showCar=this.checked"/><span class="switch-track"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><div class="toggle-swatch" style="background:#c0392b"></div><div><div class="toggle-label">Pedestrians</div><div class="toggle-sub">Class ID 11</div></div></div>
+        <label class="switch"><input type="checkbox" id="tog-person" checked onchange="state.showPerson=this.checked"/><span class="switch-track"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><div class="toggle-swatch" style="background:#c0392b;opacity:0.5"></div><div><div class="toggle-label">Danger alerts</div><div class="toggle-sub">Obstacle detection</div></div></div>
+        <label class="switch"><input type="checkbox" id="tog-danger" checked onchange="state.showDanger=this.checked"/><span class="switch-track"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><div class="toggle-swatch" style="background:var(--amber)"></div><div><div class="toggle-label">Night enhancement</div><div class="toggle-sub">CLAHE pre-process</div></div></div>
+        <label class="switch"><input type="checkbox" id="tog-night" checked onchange="updateSetting('night_enhance',this.checked)"/><span class="switch-track"></span></label>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="section-title">Colour Legend</div>
+      <div class="legend-row"><div class="legend-dot" style="background:#2e7d4f"></div><div><div class="legend-name">Road surface</div><div class="legend-class">train-id 0</div></div></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#3a5a8c"></div><div><div class="legend-name">Vehicle</div><div class="legend-class">train-id 2</div></div></div>
+      <div class="legend-row"><div class="legend-dot" style="background:#c0392b"></div><div><div class="legend-name">Pedestrian</div><div class="legend-class">train-id 11</div></div></div>
+    </div>
+    <div id="result-card">
+      <div class="result-title">✓ Processing Complete</div>
+      <div class="result-stats" id="result-stats-grid"></div>
+      <button class="btn-primary" style="width:100%;font-size:11px" onclick="downloadResult()">Download Processed Video</button>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-ghost" style="width:100%" onclick="resetAll()">↑ Upload New Video</button>
+    </div>
+  </aside>
+
+  <!-- CENTER -->
+  <section class="viewport" id="viewport">
+    <div id="upload-zone"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="event.preventDefault();this.classList.remove('drag-over');if(event.dataTransfer.files[0])handleFileObj(event.dataTransfer.files[0])"
+         onclick="document.getElementById('file-input').click()">
+      <div class="upload-illustration">
+        <div class="upload-ring-outer"></div>
+        <div class="upload-ring-inner">🎬</div>
+      </div>
+      <div class="upload-copy">
+        <h2>Drop your night drive video</h2>
+        <p>Upload any recorded drive video and get<br/>road + obstacle segmentation guidance.</p>
+        <p style="margin-top:6px;font-size:11px;color:var(--text-3)">MP4 · MOV · AVI · WEBM — up to 500 MB</p>
+      </div>
+      <div class="upload-cta">
+        <button class="btn-primary" onclick="event.stopPropagation();document.getElementById('file-input').click()">Select File</button>
+        <span style="font-size:12px;color:var(--text-3)">or drag & drop</span>
+      </div>
+      <input type="file" id="file-input" accept="video/*" onchange="handleFile(event)"/>
+    </div>
+
+    <div id="player-area">
+      <div class="video-wrapper" id="video-wrapper">
+        <!-- result-mode: this element is shown and plays the processed video -->
+        <video id="source-video" playsinline
+               onended="onVideoEnded()"
+               ontimeupdate="onTimeUpdate()">
+        </video>
+        <!-- preview-mode: canvas sits on top with simulated overlay -->
+        <canvas id="output-canvas"></canvas>
+
+        <div class="hud-chips" id="hud-chips" style="display:none">
+          <div class="hud-chip">MODE <span class="chip-val" id="hud-mode">NIGHT</span></div>
+          <div class="hud-chip">CONF <span class="chip-val" id="hud-conf">—</span></div>
+          <div class="hud-chip">ROAD <span class="chip-val" id="hud-road">—</span></div>
+          <div class="hud-chip">FPS  <span class="chip-val" id="hud-fps">—</span></div>
+        </div>
+        <div class="hud-file" id="hud-file" style="display:none"></div>
+        <div id="danger-banner">⚠ OBSTACLE ON ROAD</div>
+        <div id="processing-overlay">
+          <div class="progress-ring-wrap">
+            <svg class="progress-ring" viewBox="0 0 72 72">
+              <circle class="progress-ring-bg" cx="36" cy="36" r="32"/>
+              <circle class="progress-ring-fill" id="ring-fill" cx="36" cy="36" r="32"/>
+            </svg>
+            <div class="progress-pct" id="progress-pct">0%</div>
+          </div>
+          <div class="processing-label">Processing video…</div>
+          <div class="processing-sub">Running U-Net inference on each frame</div>
+        </div>
+      </div>
+
+      <div class="video-controls">
+        <div class="progress-track" id="progress-track" onclick="seekVideo(event)">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="controls-row">
+          <button class="ctrl" onclick="skip(-10)">⏮</button>
+          <button class="ctrl primary" id="play-btn" onclick="togglePlay()">▶</button>
+          <button class="ctrl" onclick="skip(10)">⏭</button>
+          <span class="time-label" id="time-label">0:00 / 0:00</span>
+          <div class="spacer"></div>
+          <div class="mode-group">
+            <button class="mode-pill active" onclick="setMode('night',this)">Night</button>
+            <button class="mode-pill"        onclick="setMode('day',  this)">Day</button>
+            <button class="mode-pill"        onclick="setMode('raw',  this)">Raw</button>
+          </div>
+          <select class="speed-sel" onchange="document.getElementById('source-video').playbackRate=parseFloat(this.value)">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+          </select>
+          <button class="ctrl" onclick="document.getElementById('viewport').requestFullscreen()">⛶</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT -->
+  <aside class="sidebar sidebar-right">
+    <div class="sidebar-section">
+      <div class="section-title">Analytics</div>
+      <div class="stat-card">
+        <div class="stat-label">Road Coverage</div>
+        <div><span class="stat-value green" id="stat-road">—</span><span class="stat-unit">%</span></div>
+        <div class="sparkline" id="sparkline">
+          <div class="spark-bar" style="height:35%"></div><div class="spark-bar" style="height:50%"></div>
+          <div class="spark-bar" style="height:65%"></div><div class="spark-bar" style="height:55%"></div>
+          <div class="spark-bar" style="height:70%"></div><div class="spark-bar" style="height:60%"></div>
+          <div class="spark-bar" style="height:45%"></div><div class="spark-bar" style="height:40%"></div>
+        </div>
+      </div>
+      <div class="stat-card"><div class="stat-label">Avg Confidence</div><div><span class="stat-value" id="stat-conf">—</span><span class="stat-unit">%</span></div></div>
+      <div class="stat-card"><div class="stat-label">Inference Latency</div><div><span class="stat-value amber" id="stat-lat">—</span><span class="stat-unit">ms</span></div></div>
+      <div class="stat-card"><div class="stat-label">Danger Events</div><div><span class="stat-value red" id="stat-danger">0</span><span class="stat-unit">total</span></div></div>
+    </div>
+    <div class="sidebar-section" style="flex:1;display:flex;flex-direction:column">
+      <div class="section-title">Alert Log</div>
+      <div class="alert-log" id="alert-log">
+        <div class="no-alerts" id="no-alerts-msg">No alerts yet</div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════
+const state = {
+  playing:false, mode:'night',
+  showRoad:true, showCar:true, showPerson:true, showDanger:true,
+  dangerCount:0, roadHistory:[], fps:0, frameCount:0, lastFpsTime:0,
+  animId:null,
+  videoMode:null,    // 'preview' | 'result'
+  videoLoaded:false,
+  jobId:null, resultVideoUrl:null, lastDangerAt:-10,
+};
+
+// ═══════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════
+setInterval(()=>{ document.getElementById('clock').textContent=new Date().toTimeString().slice(0,8); },1000);
+
+fetch('/api/model_info').then(r=>r.json()).then(d=>{
+  const dot=document.getElementById('model-dot'), txt=document.getElementById('model-status-text');
+  if(d.model_exists){ txt.textContent=`U-Net ready · ${d.model_size_mb} MB`; }
+  else{ dot.className='dot offline'; txt.textContent='Model not trained yet'; }
+}).catch(()=>{ document.getElementById('model-dot').className='dot offline'; document.getElementById('model-status-text').textContent='Server offline'; });
+
+function syncSlider(el,labelId,fmt){
+  document.getElementById(labelId).textContent=fmt(parseFloat(el.value));
+  el.style.setProperty('--pct',((el.value-el.min)/(el.max-el.min)*100).toFixed(1)+'%');
+}
+['conf-slider','clahe-slider'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.style.setProperty('--pct',((el.value-el.min)/(el.max-el.min)*100).toFixed(1)+'%');
+});
+
+function updateSetting(key,value){
+  fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[key]:value})}).catch(()=>{});
+}
+
+// ═══════════════════════════════════════════
+// Upload
+// ═══════════════════════════════════════════
+function handleFile(e){ if(e.target.files[0]) handleFileObj(e.target.files[0]); }
+
+async function handleFileObj(file){
+  if(!file.type.startsWith('video/')) return toast('Please upload a video file.');
+
+  // Step 1: local preview immediately
+  const vid=document.getElementById('source-video');
+  vid.src=URL.createObjectURL(file);
+  await new Promise((res,rej)=>{ vid.onloadedmetadata=res; vid.onerror=rej; });
+
+  state.videoMode='preview';
+  state.videoLoaded=true;
+  showPlayer(file.name, vid.videoWidth, vid.videoHeight);
+  setWrapperMode('preview');
+
+  // Step 2: upload + process on backend
+  toast('Uploading to server…');
+  const form=new FormData(); form.append('video',file);
+  try{
+    const uRes=await fetch('/api/upload',{method:'POST',body:form});
+    const uData=await uRes.json();
+    if(!uRes.ok){ toast(uData.error||'Upload failed'); return; }
+    state.jobId=uData.job_id;
+    toast('Uploaded. Starting inference…');
+
+    const pRes=await fetch(`/api/process/${state.jobId}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        threshold:parseFloat(document.getElementById('conf-slider').value)/100,
+        night_enhance:document.getElementById('tog-night').checked,
+        clahe_clip:parseFloat(document.getElementById('clahe-slider').value)/10,
+      }),
+    });
+    if(!pRes.ok){ toast('Failed to start processing'); return; }
+
+    showProcessingOverlay(true);
+    pollStatus();
+  } catch(err){
+    toast('Server not reachable — preview mode only');
+  }
+}
+
+// ═══════════════════════════════════════════
+// Poll + load result
+// ═══════════════════════════════════════════
+async function pollStatus(){
+  if(!state.jobId) return;
+  try{
+    const res=await fetch(`/api/status/${state.jobId}`);
+    const data=await res.json();
+    if(data.status==='processing'||data.status==='pending'){
+      updateProcessingProgress(data.progress||0);
+      setTimeout(pollStatus,1000);
+    } else if(data.status==='done'){
+      updateProcessingProgress(100);
+      setTimeout(loadResult,500);
+    } else if(data.status==='error'){
+      showProcessingOverlay(false);
+      toast('Processing error: '+(data.error||'unknown'));
+    }
+  } catch(e){ setTimeout(pollStatus,2000); }
+}
+
+async function loadResult(){
+  try{
+    const res=await fetch(`/api/result/${state.jobId}`);
+    const result=await res.json();
+    if(!res.ok){ toast(result.error||'Failed to load result'); return; }
+
+    state.resultVideoUrl=result.video_url;
+
+    // Stop canvas loop
+    if(state.animId){ cancelAnimationFrame(state.animId); state.animId=null; }
+
+    // Switch to result mode
+    setWrapperMode('result');
+    state.videoMode='result';
+
+    const vid=document.getElementById('source-video');
+    vid.pause();
+    vid.src=result.video_url;
+    vid.load();
+
+    vid.oncanplay=()=>{
+      showProcessingOverlay(false);
+      state.videoLoaded=true;
+      state.playing=false;
+      document.getElementById('play-btn').textContent='▶';
+      showResultCard(result.stats);
+      toast('Processing complete — press ▶ to play ✓');
+      vid.oncanplay=null;
+    };
+    vid.onerror=()=>{ showProcessingOverlay(false); toast('Video load error — try downloading'); };
+
+  } catch(e){ showProcessingOverlay(false); toast('Failed to load result: '+e.message); }
+}
+
+// ═══════════════════════════════════════════
+// Wrapper mode switch
+// ═══════════════════════════════════════════
+function setWrapperMode(mode){
+  // 'preview' → canvas visible, video hidden
+  // 'result'  → video visible, canvas hidden
+  const w=document.getElementById('video-wrapper');
+  if(mode==='result') w.classList.add('result-mode');
+  else w.classList.remove('result-mode');
+}
+
+// ═══════════════════════════════════════════
+// UI helpers
+// ═══════════════════════════════════════════
+function showPlayer(filename,w,h){
+  document.getElementById('upload-zone').style.display='none';
+  document.getElementById('player-area').style.display='flex';
+  document.getElementById('hud-chips').style.display='flex';
+  document.getElementById('hud-file').style.display='block';
+  document.getElementById('hud-file').textContent=`${filename}  ${w}×${h}`;
+  const cvs=document.getElementById('output-canvas');
+  cvs.width=w||640; cvs.height=h||360;
+}
+function showProcessingOverlay(show){
+  document.getElementById('processing-overlay').style.display=show?'flex':'none';
+}
+function updateProcessingProgress(pct){
+  const circ=2*Math.PI*32;
+  document.getElementById('ring-fill').style.strokeDashoffset=circ-(pct/100)*circ;
+  document.getElementById('progress-pct').textContent=Math.round(pct)+'%';
+}
+function showResultCard(stats){
+  document.getElementById('result-card').style.display='block';
+  const entries=[['Frames',stats.frames],['Avg Conf',stats.avg_confidence+'%'],['Road %',stats.avg_road_pct+'%'],['Avg Lat',stats.avg_latency_ms+'ms'],['Danger evt',stats.danger_count]];
+  document.getElementById('result-stats-grid').innerHTML=entries.map(([k,v])=>`<div class="result-stat"><strong>${v}</strong> ${k}</div>`).join('');
+  document.getElementById('stat-conf').textContent=stats.avg_confidence;
+  document.getElementById('stat-road').textContent=stats.avg_road_pct;
+  document.getElementById('stat-lat').textContent=stats.avg_latency_ms;
+  document.getElementById('stat-danger').textContent=stats.danger_count;
+  state.dangerCount=stats.danger_count;
+}
+function downloadResult(){ if(state.resultVideoUrl) window.open(state.resultVideoUrl,'_blank'); }
+
+function resetAll(){
+  const vid=document.getElementById('source-video');
+  vid.pause(); vid.src='';
+  state.playing=false; state.videoLoaded=false; state.jobId=null;
+  state.resultVideoUrl=null; state.videoMode=null;
+  if(state.animId){ cancelAnimationFrame(state.animId); state.animId=null; }
+  setWrapperMode('preview');
+  document.getElementById('upload-zone').style.display='flex';
+  document.getElementById('player-area').style.display='none';
+  document.getElementById('play-btn').textContent='▶';
+  document.getElementById('danger-banner').style.display='none';
+  document.getElementById('result-card').style.display='none';
+  document.getElementById('file-input').value='';
+  document.getElementById('alert-log').innerHTML='<div class="no-alerts" id="no-alerts-msg">No alerts yet</div>';
+  ['stat-road','stat-conf','stat-lat'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('stat-danger').textContent='0';
+  state.dangerCount=0; state.roadHistory=[];
+}
+
+// ═══════════════════════════════════════════
+// Playback — KEY FIX: two separate paths
+// ═══════════════════════════════════════════
+function togglePlay(){
+  if(!state.videoLoaded){ toast('Video not ready yet'); return; }
+  const vid=document.getElementById('source-video');
+
+  if(state.videoMode==='result'){
+    // RESULT MODE: just play/pause the HTML video element directly
+    // No canvas, no renderFrame loop — the video already has overlays baked in
+    if(vid.paused||vid.ended){
+      vid.play()
+        .then(()=>{ state.playing=true; document.getElementById('play-btn').textContent='⏸'; })
+        .catch(e=>toast('Playback error: '+e.message));
+    } else {
+      vid.pause();
+      state.playing=false;
+      document.getElementById('play-btn').textContent='▶';
+    }
+  } else {
+    // PREVIEW MODE: canvas render loop on local file
+    if(vid.paused||vid.ended){
+      vid.play().catch(e=>toast('Playback error: '+e.message));
+      state.playing=true;
+      document.getElementById('play-btn').textContent='⏸';
+      state.lastFpsTime=performance.now();
+      state.animId=requestAnimationFrame(renderPreviewFrame);
+    } else {
+      vid.pause();
+      state.playing=false;
+      document.getElementById('play-btn').textContent='▶';
+      if(state.animId){ cancelAnimationFrame(state.animId); state.animId=null; }
+    }
+  }
+}
+
+// timeupdate fires continuously while video plays — updates progress bar
+function onTimeUpdate(){
+  const vid=document.getElementById('source-video');
+  const dur=vid.duration||1;
+  document.getElementById('progress-fill').style.width=(vid.currentTime/dur*100)+'%';
+  document.getElementById('time-label').textContent=fmt(vid.currentTime)+' / '+fmt(dur);
+}
+function onVideoEnded(){
+  state.playing=false;
+  document.getElementById('play-btn').textContent='▶';
+}
+
+function skip(s){
+  if(!state.videoLoaded) return;
+  const vid=document.getElementById('source-video');
+  vid.currentTime=Math.max(0,Math.min(vid.duration||0,vid.currentTime+s));
+  if(state.videoMode==='preview'&&vid.paused) renderPreviewFrame();
+}
+function seekVideo(e){
+  if(!state.videoLoaded) return;
+  const track=document.getElementById('progress-track');
+  const vid=document.getElementById('source-video');
+  vid.currentTime=(e.offsetX/track.offsetWidth)*(vid.duration||0);
+  if(state.videoMode==='preview'&&vid.paused) renderPreviewFrame();
+}
+function setMode(mode,btn){
+  state.mode=mode;
+  document.querySelectorAll('.mode-pill').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('hud-mode').textContent=mode.toUpperCase();
+}
+
+// ═══════════════════════════════════════════
+// Preview canvas loop (simulation before backend completes)
+// ═══════════════════════════════════════════
+function renderPreviewFrame(){
+  const vid=document.getElementById('source-video');
+  const cvs=document.getElementById('output-canvas');
+  const ctx=cvs.getContext('2d');
+  const W=cvs.width,H=cvs.height;
+  if(!W||!H||vid.readyState<2){ state.animId=requestAnimationFrame(renderPreviewFrame); return; }
+
+  ctx.drawImage(vid,0,0,W,H);
+  const t=vid.currentTime;
+  const conf=parseFloat(document.getElementById('conf-slider').value)/100;
+
+  if(state.mode==='night'){
+    ctx.save(); ctx.globalCompositeOperation='multiply';
+    ctx.fillStyle='rgba(180,200,230,0.18)'; ctx.fillRect(0,0,W,H); ctx.restore();
+  }
+  if(state.showRoad){
+    ctx.save(); ctx.globalAlpha=0.38; ctx.fillStyle='#2c7a4d';
+    const wave=Math.sin(t*0.25)*0.015;
+    ctx.beginPath();
+    ctx.moveTo(W*(0.27+wave),H*0.54); ctx.lineTo(W*(0.73-wave),H*0.54);
+    ctx.lineTo(W*0.86,H); ctx.lineTo(W*0.14,H);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  const cx1=(Math.sin(t*0.2)*0.12+0.50)*W;
+  const cx2=(Math.sin(t*0.16+1.8)*0.08+0.37)*W;
+  if(state.showCar&&conf>0.3){
+    ctx.save(); ctx.globalAlpha=0.40; ctx.fillStyle='#3a5a8c';
+    ctx.fillRect(cx1-W*0.06,H*0.55,W*0.12,H*0.08);
+    if(conf>0.42) ctx.fillRect(cx2-W*0.05,H*0.56,W*0.10,H*0.07);
+    ctx.globalAlpha=1; ctx.strokeStyle='#3a5a8c'; ctx.lineWidth=1.2;
+    ctx.strokeRect(cx1-W*0.06,H*0.55,W*0.12,H*0.08);
+    if(conf>0.42) ctx.strokeRect(cx2-W*0.05,H*0.56,W*0.10,H*0.07);
+    ctx.restore();
+  }
+  const px=(Math.sin(t*0.13+0.9)*0.07+0.61)*W;
+  const hasPerson=state.showPerson&&conf>0.5&&Math.sin(t*0.4)>0.1;
+  if(hasPerson){
+    ctx.save(); ctx.globalAlpha=0.42; ctx.fillStyle='#cd4738';
+    ctx.fillRect(px-W*0.022,H*0.55,W*0.044,H*0.10);
+    ctx.globalAlpha=1; ctx.strokeStyle='#c25145'; ctx.lineWidth=1.2;
+    ctx.strokeRect(px-W*0.022,H*0.55,W*0.044,H*0.10); ctx.restore();
+  }
+  const roadPct=26+Math.sin(t*0.18)*4;
+  const isDanger=state.showDanger&&hasPerson&&conf>0.5;
+  const now=performance.now(); state.frameCount++;
+  if(now-state.lastFpsTime>600){
+    state.fps=(state.frameCount/((now-state.lastFpsTime)/1000)).toFixed(1);
+    state.frameCount=0; state.lastFpsTime=now;
+  }
+  document.getElementById('hud-fps').textContent=state.fps;
+  document.getElementById('hud-conf').textContent=(conf*100).toFixed(0)+'%';
+  document.getElementById('hud-road').textContent=roadPct.toFixed(1)+'%';
+  document.getElementById('stat-road').textContent=roadPct.toFixed(1);
+  document.getElementById('stat-conf').textContent=(conf*100).toFixed(0);
+  updateSparkline(roadPct);
+  if(isDanger&&t-state.lastDangerAt>3){ state.lastDangerAt=t; triggerDanger(t); }
+  document.getElementById('danger-banner').style.display=isDanger?'block':'none';
+  if(!vid.paused&&!vid.ended){ state.animId=requestAnimationFrame(renderPreviewFrame); }
+  else{ document.getElementById('play-btn').textContent='▶'; state.playing=false; }
+}
+
+function triggerDanger(t){
+  state.dangerCount++;
+  document.getElementById('stat-danger').textContent=state.dangerCount;
+  const log=document.getElementById('alert-log');
+  const nm=document.getElementById('no-alerts-msg'); if(nm) nm.remove();
+  const entry=document.createElement('div'); entry.className='alert-entry';
+  entry.innerHTML=`<span class="alert-type">Obstacle on road</span><span class="alert-time">${fmt(t)}</span>`;
+  log.insertBefore(entry,log.firstChild);
+  if(log.children.length>15) log.removeChild(log.lastChild);
+}
+
+function fmt(s){ s=s||0; const m=Math.floor(s/60); return `${m}:${String(Math.floor(s%60)).padStart(2,'0')}`; }
+function updateSparkline(val){
+  state.roadHistory.push(val); if(state.roadHistory.length>8) state.roadHistory.shift();
+  const max=Math.max(...state.roadHistory,1);
+  document.querySelectorAll('#sparkline .spark-bar').forEach((b,i)=>{ if(state.roadHistory[i]!==undefined) b.style.height=(state.roadHistory[i]/max*80+20)+'%'; });
+}
+function toast(msg,ms=3500){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),ms); }
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+  if(e.code==='ArrowRight') skip(5);
+  if(e.code==='ArrowLeft')  skip(-5);
+});
+</script>
+</body>
+</html>
+
+

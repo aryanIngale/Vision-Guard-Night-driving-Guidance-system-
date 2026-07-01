@@ -1,0 +1,32 @@
+# Virtual Environment
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# VS Code
+.vscode/
+
+# Dataset
+dataset/
+
+# Model Weights
+*.pth
+*.pt
+
+# Uploads
+uploads/
+static/uploads/
+
+# Outputs (optional)
+outputs/
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Windows
+Thumbs.db
